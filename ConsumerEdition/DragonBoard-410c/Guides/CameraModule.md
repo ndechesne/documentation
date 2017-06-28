@@ -1,14 +1,14 @@
-### Using CSI camera
+# Using CSI camera
 
-#### Introduction
+## Introduction
 
-The Linaro Debian release includes drivers for:
+The Linaro Debian and/or OpenEmbedded releases for the DragonBoard 410c include drivers for:
 
 * OV5645 camera sensor
 * Qualcomm Camera Subsystem (CAMSS)
 * Qualcomm Camera Control Interface (CCI)
 
-#### OV5645
+## OV5645
 
 The OV5645 is a 5MP MIPI CSI2 camera sensor. The driver supports three sensor modes:
 
@@ -16,9 +16,9 @@ The OV5645 is a 5MP MIPI CSI2 camera sensor. The driver supports three sensor mo
 * 1920x1080 30fps (cropped from full frame)
 * 1280x960 30fps
 
-The driver was accepted upstream and is expected in the Linux Kernel v4.13.
+The driver was accepted upstream and is expected in the Linux Kernel v4.13. It is also backported in the Linaro releases kernel branches.
 
-#### CAMSS
+## CAMSS
 
 The Camera Subsystem hardware found on 8x16 processors consists of:
 
@@ -38,48 +38,36 @@ The driver implements the V4L2 subdev interface and Media Controller API. With t
 The driver supports:
 
 * Input from a camera sensor via CSIPHY
-
 * Generation of test input data by the TG in CSID
-
-* RDI interface of VFE - raw dump of the input data to memory.
-Supported formats:
-
-    * YUYV/UYVY/YVYU/VYUY (packed YUV 4:2:2)
-    * MIPI RAW8 (8bit Bayer RAW)
-    * MIPI RAW10 (10bit packed Bayer RAW)
-    * MIPI RAW12 (12bit packed Bayer RAW)
-
+* RDI interface of VFE - raw dump of the input data to memory. Supported formats:
+  * YUYV/UYVY/YVYU/VYUY (packed YUV 4:2:2)
+  * MIPI RAW8 (8bit Bayer RAW)
+  * MIPI RAW10 (10bit packed Bayer RAW)
+  * MIPI RAW12 (12bit packed Bayer RAW)
 * PIX interface of VFE
-    * Format conversion of the input data
-
-        Supported input formats:
-        
-        * YUYV/UYVY/YVYU/VYUY (packed YUV 4:2:2).
-
-        Supported output formats:
-        
-        * NV12/NV21 (two plane YUV 4:2:0);
-        * NV16/NV61 (two plane YUV 4:2:2).
-
-    * Scaling. Configuration of the VFE Encoder Scale module for downscalling with ratio up to 16x.
-
-    * Cropping. Configuration of the VFE Encoder Crop module.
-
+  * Format conversion of the input data
+    * Supported input formats:
+       * YUYV/UYVY/YVYU/VYUY (packed YUV 4:2:2).
+    * Supported output formats:
+       * NV12/NV21 (two plane YUV 4:2:0);
+       * NV16/NV61 (two plane YUV 4:2:2).
+  * Scaling. Configuration of the VFE Encoder Scale module for downscalling with ratio up to 16x.
+  * Cropping. Configuration of the VFE Encoder Crop module.
 * Concurrent and independent usage of two data inputs - could be camera sensors and/or TG.
 
 The driver is under review in linux-media upstreaming list.
 
-#### CCI
+## CCI
 
 The CCI is a I2C controller dedicated for camera control.
 
 The current driver is a version which originates from QC Android camera driver and is now separated from the CAMSS driver and compiled on Linux. For this another V4L2 driver and media device are created - this is only a temporary work to enable control on the camera sensor. Proper implementation will follow.
 
-#### Enable camera
+## Enable camera
 
 The Linaro release is configured with no camera and users with camera are expected to configure the DTS file accordingly. Please check commit "dts: Disable camera sensors in dtsi" in the kernel. This patch assumes that two OV5645 camera sensors are connected on the board (one per CSI2 channel) and disables them. To enable a camera please revert (part of) this patch.
 
-#### Basic usage
+## Basic usage
 
 Make sure that the following package is installed:
 
@@ -101,7 +89,7 @@ If everything is ok, you should see something like this:
 
 ````
 
-##### Direct dump to memory
+### Direct dump to memory
 
 You need to configure the Media Controller pipeline: link CSIPHY to CSID, CSID to ISPIF, ISPIF to VFE. Then configure formats on all entities in the pipeline. For direct dump to memory (RDI channels) this looks like this:
 
@@ -118,7 +106,7 @@ Or you can use GStreamer to show a live preview from the camera:
     
 If you have a second camera sensor and intend to use it concurrently then link and configure another pipeline which includes the second camera and the unused entities. Use a v4l2 application the same way only pointing the correct video device node used in this pipeline.
 
-##### Format conversion
+### Format conversion
 
 Pipeline configuration for the format conversion looks like this:
 
@@ -136,25 +124,25 @@ And similar Gstreamer pipeline for a JPEG picture:
 
     gst-launch-1.0 v4l2src device=/dev/video3 num-buffers=1 ! 'video/x-raw,format=NV12,width=1280,height=960,framerate=30/1' ! jpegenc ! filesink location=image02.jpg
 
-##### Scale
+### Scale
 
 Format configuration for NV12/NV21 with downscale ratio 2x. The compose element on msm_vfe0_pix sink pad defines the output size from the scaler. Syntax is (left,top)/widthxheight and only width and height are valid as this is scaling only. Downscaling with up to 16x ratio is supported:
 
     media-ctl -d /dev/media1 -V '"ov5645 1-0076":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_csiphy0":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_csid0":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_ispif0":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_vfe0_pix":0[fmt:UYVY8_2X8/1280x960 field:none compose:(0,0)/640x480],"msm_vfe0_pix":1[fmt:UYVY8_1_5X8/640x480 field:none]'
 
-##### Crop
+### Crop
 
 Format configuration for NV12/NV21 with crop of the bottom right corner. The crop element on msm_vfe0_pix source pad defines the cropped area. Syntax is (left,top)/widthxheight and all fields are valid:
 
     media-ctl -d /dev/media1 -V '"ov5645 1-0076":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_csiphy0":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_csid0":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_ispif0":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_vfe0_pix":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_vfe0_pix":1[fmt:UYVY8_1_5X8/320x240 field:none crop:(960,720)/320x240]'
 
-##### Scale + crop
+### Scale + crop
 
 Format configuration for NV12/NV21 with downscale ratio 2x and crop of the center area. Scaling is done first and then cropping (scaler module is in front of the crop module in the hardware pipeline of the VFE):
 
     media-ctl -d /dev/media1 -V '"ov5645 1-0076":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_csiphy0":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_csid0":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_ispif0":0[fmt:UYVY8_2X8/1280x960 field:none],"msm_vfe0_pix":0[fmt:UYVY8_2X8/1280x960 field:none compose:(0,0)/640x480],"msm_vfe0_pix":1[fmt:UYVY8_1_5X8/320x240 field:none crop:(160,120)/320x240]'
 
-#### Video record pipeline
+## Video record pipeline
 
 Starting with XX release a video recording GStreamer pipeline is supported involving the camera and video encoder. Currently this has the following limitations:
 
@@ -166,7 +154,7 @@ Example GStreamer pipeline for video recording:
     gst-launch-1.0 -e v4l2src device=/dev/video3 ! video/x-raw,format=NV12,width=1280,height=960,framerate=30/1 ! v4l2h264enc extra-controls="controls,h264_profile=4,video_bitrate=2000000;" ! h264parse ! mp4mux ! filesink location=video.mp4
 
 
-#### Using CSID Test Generator
+## Using CSID Test Generator
 
 If you do not have any camera sensor, it is possible to use the internal CSID Test Generator (TG). To enable it download and compile the `yavta` tool from [here](http://git.ideasonboard.org/yavta.git):
 
